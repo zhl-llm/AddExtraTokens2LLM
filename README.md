@@ -21,11 +21,11 @@ This an example for adding extra general tokens to pre-trained LLM before its fi
 
   In summary, adding extra tokens helps pre-trained LLM adapt more efficiently to domain-specific requirements during fine-tuning, reducing the need for extensive training data. It is also a key technique for balancing fine-tuning effectiveness and computational cost.
 
-## How to lanch this example?
+## How to Launch this example?
 
   There are 2 methods to lanch this example:
 
-### 1. Lanch it in local python virtual environment
+### 1. Launch it in local python virtual environment
 
 - Create a virtual environment and activate it
 
@@ -55,7 +55,7 @@ export GPTQMODEL_USE_MODELSCOPE="True"
 export HF_ENDPOINT="https://hf-mirror.com"
 ```
 
-### 2. Lanch it in container
+### 2. Launch it in container
 
 - Build docker image of this example
 
