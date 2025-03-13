@@ -48,7 +48,7 @@ export HUGGINGFACE_TOKEN="Your Huggingface Token"
 $ python llm_loader.py
 ```
 
-**Note: Please execute below commands to use Mota Community or hf mirror webesite if you can not access huggingface:
+*Note: Please execute below commands to use Mota Community or hf mirror webesite if you can not access huggingface:
 
 ```sh
 export GPTQMODEL_USE_MODELSCOPE="True"
@@ -63,7 +63,7 @@ export HF_ENDPOINT="https://hf-mirror.com"
 $ docker build -t <IMAGE_NAME> .
 ```
 
-**Note: Please replace `<IMAGE_NAME>` with the really image name.
+*Note: Please replace `<IMAGE_NAME>` with the really image name.
 
 - Run the container based on this docker image
 
@@ -71,4 +71,4 @@ $ docker build -t <IMAGE_NAME> .
 $ docker run -e HUGGINGFACE_TOKEN="Your Huggingface Token"  --rm  --name <CONTAINER_NAME> <IMAGE_NAME>
 ```
 
-**Note: Please replace `<CONTAINER_NAME>` and `<IMAGE_NAME>` with the really container and image name.
+*Note: Please replace `<CONTAINER_NAME>` and `<IMAGE_NAME>` with the really container and image name.
