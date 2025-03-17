@@ -1,6 +1,19 @@
+import argparse
+import ast
 import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
+def read_token_file(file_path):
+    """Reads a text file and returns the parsed list.."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read().strip()
+            # convert string to list
+            return ast.literal_eval(content)
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+        return []
 
 def get_huggingface_token():
     """Retrieve the Hugging Face token from environment variables."""
@@ -90,19 +103,29 @@ def generate_text(model, tokenizer, text, max_length=50):
 
 def main():
     """Main function to run the entire pipeline."""
+    parser = argparse.ArgumentParser(description="Merge lists from multiple text files.")
+    parser.add_argument('--path', nargs='+', help="Absolute paths to text files containing new tokens", required=False)
+
+    args = parser.parse_args()
+    new_tokens = []
+    if args.path:
+        for file_path in args.path:
+            new_tokens.extend(read_token_file(file_path))
+
+    print("Merged token list: ", new_tokens)
+    # new_tokens = ["k8s-cluster", "kubernetes", "devops", "microservices", "containerization", "serverless", 
+    #              "service mesh", "observability", "gitops", "scalability"]
+
     set_mirror_url()
     hf_token = get_huggingface_token()
 
     model_name = "openbmb/MiniCPM-2B-sft-bf16"
     model, tokenizer = load_model_and_tokenizer(model_name, hf_token)
 
-    new_tokens = ["k8s-cluster", "kubernetes", "devops", "microservices", "containerization", "serverless", 
-                  "service mesh", "observability", "gitops", "scalability"]
-    tokenizer, model = add_new_tokens(tokenizer, model, new_tokens)
-
-    save_model_and_tokenizer(model, tokenizer)
-
-    model, tokenizer = reload_model_and_tokenizer("./update_tokenizer", "./updated_model")
+    if new_tokens:
+        tokenizer, model = add_new_tokens(tokenizer, model, new_tokens)
+        save_model_and_tokenizer(model, tokenizer)
+        model, tokenizer = reload_model_and_tokenizer("./update_tokenizer", "./updated_model")
 
     text = "今天天气很好，我想去"
     output_text = generate_text(model, tokenizer, text)

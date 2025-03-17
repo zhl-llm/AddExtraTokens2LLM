@@ -17,4 +17,4 @@ COPY llm_loader.py /app/llm_loader.py
 RUN pip install --no-cache-dir --upgrade pip setuptools && \
     pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "llm_loader.py"]
+ENTRYPOINT ["python", "llm_loader.py"]
