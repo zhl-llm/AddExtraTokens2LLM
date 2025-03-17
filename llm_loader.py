@@ -2,89 +2,111 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-# 从环境变量中读取 Hugging Face token
-hf_token = os.getenv("HUGGINGFACE_TOKEN")
-if not hf_token:
-    raise ValueError("HUGGINGFACE_TOKEN is not set in environment variables.")
+def get_huggingface_token():
+    """Retrieve the Hugging Face token from environment variables."""
+    hf_token = os.getenv("HUGGINGFACE_TOKEN")
+    if not hf_token:
+        raise ValueError("HUGGINGFACE_TOKEN is not set in environment variables.")
+    return hf_token
 
-mirror_url = os.getenv("HF_ENDPOINT", "https://huggingface.co")
-os.environ["HF_ENDPOINT"] = mirror_url
-print(f"Using mirror URL: {mirror_url}")
+def set_mirror_url():
+    """Set the Hugging Face mirror URL."""
+    mirror_url = os.getenv("HF_ENDPOINT", "https://huggingface.co")
+    os.environ["HF_ENDPOINT"] = mirror_url
+    print(f"Using mirror URL: {mirror_url}")
 
-model_name = "openbmb/MiniCPM-2B-sft-bf16"
-# model_name = "ussipan/SipanGPT-0.1-Llama-3.2-1B-GGUF"
-# 下载模型文件
-# from modelscope import snapshot_download
-# model_name = snapshot_download(model_name, cache_dir=model_dir)
-
-# 关键修改 1：禁用所有缓存和优化选项
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    # model_dir,
-    token=hf_token,
-    device_map="cpu",
-    trust_remote_code=True,
-    force_download=True,
-    torch_dtype=torch.bfloat16,  # 半精度减少内存占用
-    # torch_dtype=torch.float16,    # float16 减少内存占用
-    use_cache=False,             # 全局禁用缓存
-    do_sample=False,            # 关闭采样（避免触发动态逻辑）
-    low_cpu_mem_usage=True       # 防止内存碎片化
-)
-tokenizer = AutoTokenizer.from_pretrained(
-    model_name,
-    token=hf_token,
-    trust_remote_code=True
-)
-
-# 定义新的 tokens（比如特定领域的tokens）
-new_tokens = ["k8s-cluster", "kubernetes", "devops", "microservices", "containerization", "serverless", "service mesh", "observability", "gitops", "scalability"]
-
-# 给 tokenizer 添加新的 tokens
-num_added_tokens = tokenizer.add_tokens(new_tokens)
-print(f"1. 添加 {num_added_tokens} 个新的 tokens 到 tokenizer 中.")
-
-# 重置模型的 token 嵌入此表长度来保持因新增 tokens 导致的变化
-model.resize_token_embeddings(len(tokenizer))
-
-# 正确初始化 token 嵌入
-embedding_layer = model.get_input_embeddings()
-with torch.no_grad():
-    for i in range(len(new_tokens)):
-        embedding_layer.weight[-(i+1)] = torch.mean(embedding_layer.weight[:-num_added_tokens], dim=0)
-
-# 保存新增过 tokens 的 tokenizer 和 模型
-tokenizer.save_pretrained("./update_tokenizer")
-model.save_pretrained("./updated_model")
-print(f"2. 将新的 tokenizer 和模型分别保存到当前目录的 update_tokenizer 和 updated_model 文件夹下")
-
-# 重新加载新的模型
-model = AutoModelForCausalLM.from_pretrained(
-    "./updated_model",
-    device_map="cpu",
-    trust_remote_code=True,
-    force_download=True,
-    torch_dtype=torch.bfloat16,  # 半精度减少内存占用
-    # torch_dtype=torch.float16,    # float16 减少内存占用
-    use_cache=False,             # 全局禁用缓存
-    do_sample=False,            # 关闭采样（避免触发动态逻辑）
-    low_cpu_mem_usage=True       # 防止内存碎片化
-)
-tokenizer = AutoTokenizer.from_pretrained("./update_tokenizer", trust_remote_code=True)
-print(f"3. 从上面对应路径重新加载模型")
-
-text = "今天天气很好，我想去"
-inputs = tokenizer(text, return_tensors="pt")
-
-# 关键修改 2：手动设置 max_length 和缓存参数
-with torch.no_grad():
-    outputs = model.generate(
-        **inputs,
-        max_length=50,
-        num_return_sequences=1,
-        pad_token_id=tokenizer.eos_token_id,  # 显式设置终止符
-        no_repeat_ngram_size=2,               # 避免缓存机制介入
-        use_cache=False                       # 二次确认禁用
+def load_model_and_tokenizer(model_name, hf_token):
+    """Load the model and tokenizer with specified configurations."""
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        token=hf_token,
+        device_map="cpu",
+        trust_remote_code=True,
+        force_download=True,
+        torch_dtype=torch.bfloat16,
+        use_cache=False,
+        do_sample=False,
+        low_cpu_mem_usage=True
     )
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name,
+        token=hf_token,
+        trust_remote_code=True
+    )
+    return model, tokenizer
 
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+def add_new_tokens(tokenizer, model, new_tokens):
+    """Add new tokens to the tokenizer and resize the model embeddings."""
+    num_added_tokens = tokenizer.add_tokens(new_tokens)
+    print(f"1. Added {num_added_tokens} new tokens to tokenizer.")
+
+    model.resize_token_embeddings(len(tokenizer))
+
+    # Initialize new token embeddings
+    embedding_layer = model.get_input_embeddings()
+    with torch.no_grad():
+        for i in range(len(new_tokens)):
+            embedding_layer.weight[-(i+1)] = torch.mean(embedding_layer.weight[:-num_added_tokens], dim=0)
+
+    return tokenizer, model
+
+def save_model_and_tokenizer(model, tokenizer, tokenizer_path="./update_tokenizer", model_path="./updated_model"):
+    """Save the updated tokenizer and model."""
+    tokenizer.save_pretrained(tokenizer_path)
+    model.save_pretrained(model_path)
+    print(f"2. Saved updated tokenizer and model to {tokenizer_path} and {model_path}.")
+
+def reload_model_and_tokenizer(tokenizer_path, model_path):
+    """Reload the model and tokenizer from saved files."""
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        device_map="cpu",
+        trust_remote_code=True,
+        force_download=True,
+        torch_dtype=torch.bfloat16,
+        use_cache=False,
+        do_sample=False,
+        low_cpu_mem_usage=True
+    )
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+    print("3. Reloaded model and tokenizer.")
+    return model, tokenizer
+
+def generate_text(model, tokenizer, text, max_length=50):
+    """Generate text using the trained model."""
+    inputs = tokenizer(text, return_tensors="pt")
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_length=max_length,
+            num_return_sequences=1,
+            pad_token_id=tokenizer.eos_token_id,
+            no_repeat_ngram_size=2,
+            use_cache=False
+        )
+
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+def main():
+    """Main function to run the entire pipeline."""
+    set_mirror_url()
+    hf_token = get_huggingface_token()
+
+    model_name = "openbmb/MiniCPM-2B-sft-bf16"
+    model, tokenizer = load_model_and_tokenizer(model_name, hf_token)
+
+    new_tokens = ["k8s-cluster", "kubernetes", "devops", "microservices", "containerization", "serverless", 
+                  "service mesh", "observability", "gitops", "scalability"]
+    tokenizer, model = add_new_tokens(tokenizer, model, new_tokens)
+
+    save_model_and_tokenizer(model, tokenizer)
+
+    model, tokenizer = reload_model_and_tokenizer("./update_tokenizer", "./updated_model")
+
+    text = "今天天气很好，我想去"
+    output_text = generate_text(model, tokenizer, text)
+    print(output_text)
+
+if __name__ == "__main__":
+    main()
