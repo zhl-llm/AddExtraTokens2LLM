@@ -55,6 +55,12 @@ export GPTQMODEL_USE_MODELSCOPE="True"
 export HF_ENDPOINT="https://hf-mirror.com"
 ```
 
+> **Note:** User can also pass the token file list to `llm_loader.py` to add extra tokens through the following command:
+
+```sh
+python llm_loader.py --path data/tokens-0.txt data/tokens-1.txt
+```
+
 ### 2. Launch it in container
 
 - Build docker image of this example
@@ -69,6 +75,12 @@ $ docker build -t <IMAGE_NAME> .
 
 ```sh
 $ docker run -e HUGGINGFACE_TOKEN="Your Huggingface Token"  --rm  --name <CONTAINER_NAME> <IMAGE_NAME>
+```
+
+> **Note:** User can also pass the token file list to `llm_loader.py` to add extra tokens in container through the following command:
+
+```sh
+docker run -v data/tokens-0.txt:/app/tokens-0.txt -v data/tokens-1.txt:/app/tokens-1.txt -e HUGGINGFACE_TOKEN="Your Huggingface Token" --rm  --name <CONTAINER_NAME> <IMAGE_NAME> --path /app/tokens-0.txt /app/tokens-1.txt
 ```
 
 > **Note:** Please replace `<CONTAINER_NAME>` and `<IMAGE_NAME>` with the really container and image name.
