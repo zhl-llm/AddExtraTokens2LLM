@@ -48,17 +48,17 @@ export HUGGINGFACE_TOKEN="Your Huggingface Token"
 $ python llm_loader.py
 ```
 
+> **Note:** User can also pass the token file list to `llm_loader.py` to add extra tokens through the following command:
+
+```sh
+python llm_loader.py --path data/tokens-0.txt data/tokens-1.txt
+```
+
 > **Note:** Please execute below commands to use Mota Community or hf mirror webesite if you can not access huggingface:
 
 ```sh
 export GPTQMODEL_USE_MODELSCOPE="True"
 export HF_ENDPOINT="https://hf-mirror.com"
-```
-
-> **Note:** User can also pass the token file list to `llm_loader.py` to add extra tokens through the following command:
-
-```sh
-python llm_loader.py --path data/tokens-0.txt data/tokens-1.txt
 ```
 
 ### 2. Launch it in container
